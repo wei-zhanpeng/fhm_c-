@@ -79,8 +79,8 @@ public:
 
 	bool operator < (UtilityList b){
 
-		unordered_map<int, int>::iterator pos1 = mapItemToTwuList.find(this->item);
-		unordered_map<int, int>::iterator pos2 = mapItemToTwuList.find(b.item);
+		unordered_map<int, int>::iterator pos1 = mapItemToTwu.find(this->item);
+		unordered_map<int, int>::iterator pos2 = mapItemToTwu.find(b.item);
 
 		return (pos1->second) < (pos2->second);
 	}
@@ -191,6 +191,7 @@ int main()
 		Begin = clock();
 		int NumberOfRows = 0;
 		string ReadDataLine;
+		//first database scan to build item-twu map
 		do
 		{
 			getline(fin,ReadDataLine);
@@ -208,16 +209,16 @@ int main()
 				}
 				else
 				{
-					mapItemToTwu.insert(pair<short int,int>(atoi((*it).c_str()),transactionUtility));
+					mapItemToTwu.insert(pair<int,int>(atoi((*it).c_str()),transactionUtility));
 				}
 				//if(pos->second==2^32-1) cout << "overlap" <<endl;
 			}
 
 			items.clear();
 			NumberOfRows++;
+			cout << "this is "<< NumberOfRows << "line" << endl;
 		}while(!fin.eof());
-		//close file
-		//fin.close();
+		
 		list<UtilityList> listOfUtilityLists;
 		unordered_map<int,UtilityList> mapItemToUtilityList;
 		for(unordered_map<int,int>::iterator it = mapItemToTwu.begin(); it != mapItemToTwu.end(); it++)
@@ -236,15 +237,17 @@ int main()
 		total_read = 0;
 		TxtIsEnd = 0;// 1:txt is end
 		fin.seekg(0);
+		//second database scan
 		do{
 			getline(fin,ReadDataLine);
 			vector<string> split = stringSplit(ReadDataLine,':');
 			vector<string> items = stringSplit(split.front(),' ');
 			vector<string> utilityValues = stringSplit(split.back(),' ');
-
+			//保存twu大于minutil的 项-效用对
 			list<Pair> revisedTransaction;
 			int tid = 0;
 			int remainingUtility = 0;
+			//newTWU
 			int newTWU = 0;
 
 			for(int i = 0;i < items.size();i++)
@@ -260,22 +263,25 @@ int main()
 					newTWU += pair.utility;
 				}
 			}
+			//save space
 			items.clear();
 			utilityValues.clear();
+			//将剩余项按照twu大小升序排列
 			revisedTransaction.sort(revisedTransactionAscendingOrder);
+			//第二次数据库扫描构建 每个项 的效用列表以及eucs结构
 			for(list<Pair>::iterator it = revisedTransaction.begin(); it != revisedTransaction.end(); it++){
 
 				Pair pair = *it;
-
+				//去除当前项，剩余项的效用和
 				remainingUtility = remainingUtility - pair.utility;
-
+				//在效用列表和项的map中，找到当前项的map,后续添加 项-效用-剩余效用 对
 				unordered_map<int,UtilityList>::iterator tem = mapItemToUtilityList.find(pair.item);
 				UtilityList utilityListOfItem = tem->second;
 
 				Element element = Element(tid,pair.utility,remainingUtility);
 
 				utilityListOfItem.addElement(element);
-				//ecus
+				//ecus结构的构建
 				unordered_map<int,unordered_map<int,int>>::iterator temp = mapFMAP.find(pair.item);
 				unordered_map<int,int>& mapFMAPItem = temp->second;
 				if(temp == mapFMAP.end()){
@@ -294,15 +300,14 @@ int main()
 					  }
 				 }
 				 mapFMAP.insert({pair.item,mapFMAPItem});
+				 //eucs构建
 			}
+			
 			tid++;
 			revisedTransaction.clear();
-
 		}while(!fin.eof());
 		// close file
 		fin.close();
-
-		return 0;
 
 	mapItemToTwu.clear();
 	UtilityList pUL(0);
