@@ -77,6 +77,14 @@ public:
 		elements.push_back(element);
 	}
 
+	bool operator < (UtilityList b){
+
+		unordered_map<int, int>::iterator pos1 = mapItemToTwuList.find(this->item);
+		unordered_map<int, int>::iterator pos2 = mapItemToTwuList.find(b.item);
+
+		return (pos1->second) < (pos2->second);
+	}
+
 
 };
 
@@ -102,10 +110,7 @@ bool revisedTransactionAscendingOrder(Pair pair1 , Pair pair2)
 
 bool listOfUtilityListsAscendingOrder(UtilityList ul1 , UtilityList ul2)
 {
-	unordered_map<int, int>::iterator pos1 = mapItemToTwuList.find(ul1.item);
-	unordered_map<int, int>::iterator pos2 = mapItemToTwuList.find(ul2.item);
-
-	return (pos1->second) < (pos2->second);
+	return ul1 < ul2;
 }
 
 
@@ -135,7 +140,7 @@ vector<string> stringSplit(const string& str, char delim)
 }
 
 
-//construct
+/*construct
 UtilityList construct(UtilityList &P,UtilityList &px,UtilityList &py,int minUtility){
 
 
@@ -174,13 +179,13 @@ void fhm(short int prefix[],int prefixlength,UtilityList &pUL,list<UtilityList> 
 
 		fhm(prefix,prefixlength+1,X,exULs,minUtility);
 	}
-}
+}*/
 int main()
 {
 		//init_platform();
 		int prefixlength = 0;
 		ifstream fin ;
-		fin.open("./db.txt",ios::in);
+		fin.open("C:\\Users\\xidian\\Desktop\\fhm\\fhm.txt",ios::in);
 		if(!fin.is_open()) { cout << "error" <<endl; return 0 ;} 
 
 		Begin = clock();
@@ -196,7 +201,7 @@ int main()
 			for(vector<string>::iterator it = items.begin(); it != items.end(); it++)
 			{
 				unordered_map<int, int>::iterator pos = mapItemToTwu.find(atoi((*it).c_str()));
-				if(it==items.begin()) cout << mapItemToTwu.max_size() << endl;
+				//if(it==items.begin()) cout << mapItemToTwu.max_size() << endl;
 				if (pos != mapItemToTwu.end())
 				{
 					pos->second += transactionUtility;
@@ -205,7 +210,7 @@ int main()
 				{
 					mapItemToTwu.insert(pair<short int,int>(atoi((*it).c_str()),transactionUtility));
 				}
-				if(pos->second==2^32-1) cout << "overlap" <<endl;
+				//if(pos->second==2^32-1) cout << "overlap" <<endl;
 			}
 
 			items.clear();
@@ -307,7 +312,7 @@ int main()
 	printf("duration: %d",duration);
 		system("pause");
 		return 0;
-	fhm(prefix,prefixlength,pUL,listOfUtilityLists,minUtility);
+	//fhm(prefix,prefixlength,pUL,listOfUtilityLists,minUtility);
 
 	return 0;
 }
