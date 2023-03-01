@@ -3,6 +3,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <list>
 #include <iostream>
 #include <fstream>
 #include <unordered_map>
@@ -66,21 +67,25 @@ public:
 	int sumIutils ;
 	int sumRutils ;
 
+	int is_exist;
+
 	vector<Element> elements;// = new Element();
 
-	UtilityList():item(0),sumIutils(0),sumRutils(0) {}
+	UtilityList():item(0),sumIutils(0),sumRutils(0) ,is_exist(0){}
 	
 	void set(int item, int sumIutils, int sumRutils)
 	{
 		this->item = item;
 		this->sumIutils = sumIutils;
 		this->sumRutils = sumRutils;
+		this->is_exist = 1;
 	}
 
 	void addElement(Element element)
 	{
 		this->sumIutils += element.iutils;
 		this->sumRutils += element.rutils;
+		this->is_exist = 1;
 		elements.push_back(element);
 	}
 
@@ -171,11 +176,23 @@ void findElementWithTID(UtilityList &ulist,int tid,Element &e){
 }
 
 //write out
-void writeOut(int[] prefix,int prefixLength,int item,long utility){
+void writeOut(int prefix[],int prefixLength,int item,long utility,fstream &file){
 	huiCount++;
 
+	string buf;
+	string tem;
+	for(int i=0;i<prefixLength;i++){
+		tem = to_string(prefix[i]);
+		buf.append(tem);
+		buf.append(' ',1);
+	}
+	tem = to_string(item);
+	buf.append(tem);
+	buf.append(' #UTIL: ',9);
+	tem = to_string(utility);
+	buf.append(tem);
 
-
+	file << buf << endl;
 
 }
 
@@ -194,13 +211,15 @@ UtilityList construct(UtilityList &P,UtilityList &px,UtilityList &py,int minUtil
 		if(ey.is_exist==0){
 			if(ENABLE_LA_PRUNE){
 				totalUtility -= (ex.iutils+ex.rutils);
-				if(totalUtility < minUtility) return NULL;
+				if(totalUtility < minUtility) {
+					return pxyUL;
 			}
+		}
 		}
 		continue;
 	
 		//if prefix p is null
-		if( P.item == 0 ){
+		if( P.is_exist == 0 ){
 			Element eXY ;
 			eXY.set(ex.tid,ex.iutils+ey.iutils,ey.rutils);
 			pxyUL.addElement(eXY);
@@ -214,9 +233,11 @@ UtilityList construct(UtilityList &P,UtilityList &px,UtilityList &py,int minUtil
 				pxyUL.addElement(eXY);
 			}
 		}
+		
 	}
+	pxyUL.is_exist=1;
 	return pxyUL;
-
+	
 
 }
 //fhm
@@ -226,10 +247,7 @@ void fhm(int prefix[],int prefixlength,UtilityList &pUL,list<UtilityList> &ULs,i
 		list<UtilityList> exULs;
 		
 		if(X.sumIutils >= minUtility){
-			//write out(prefix,prefixlength,x.item,x.sumIutils);
-
-			file << X.item << endl;
-
+			writeOut(prefix,prefixlength,X.item,X.sumIutils,file);
 		}
 
 		if(X.sumIutils+X.sumRutils >= minUtility){
@@ -246,7 +264,7 @@ void fhm(int prefix[],int prefixlength,UtilityList &pUL,list<UtilityList> &ULs,i
 
 				//construct
 				UtilityList temp = construct(pUL,X,Y,minUtility);
-				if(sizeof(temp) == 1){
+				if(temp.is_exist==1){
 					exULs.push_back(temp);
 				}
 			}
@@ -257,6 +275,7 @@ void fhm(int prefix[],int prefixlength,UtilityList &pUL,list<UtilityList> &ULs,i
 		fhm(prefix,prefixlength+1,X,exULs,minUtility,file);
 	}
 }
+
 int main()
 {
 		//init_platform();
@@ -303,7 +322,8 @@ int main()
 
 			if((it->second) >= minUtility)
 			{
-				UtilityList ulist = UtilityList(it->first);
+				UtilityList ulist ;
+				ulist.item = it->first;
 				mapItemToUtilityList.insert(pair<int,UtilityList>(it->first,ulist));
 				listOfUtilityLists.push_back(ulist);
 			}
@@ -389,7 +409,7 @@ int main()
 		fin.close();
 
 	mapItemToTwu.clear();
-	UtilityList pUL(0);
+	UtilityList pUL;
 	//创建文件来存储hui
 	fstream file;
 	file.open("C:\\Users\\xidian\\Desktop\\fhm\\hui.txt",ios::out); //以
@@ -407,6 +427,8 @@ int main()
 	system("pause");
 	fhm(prefix,prefixlength,pUL,listOfUtilityLists,minUtility,file);
 	file.close();
+	
+	
 	return 0;
 }
 
