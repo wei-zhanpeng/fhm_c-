@@ -2,107 +2,36 @@
 #include <stdio.h>
 #include <string>
 #include <map>
-#include <vector>
 #include <list>
 #include <iostream>
 #include <fstream>
 #include <unordered_map>
 #include <list>
+#include "fhmheader.h"
 #define FILE_NAME "db.txt"
 #define ENABLE_LA_PRUNE true
 #include <algorithm>
 using namespace std;
 //time clk
 clock_t  Begin, End;
-
 double duration;
 //#define DDR_ADDR 0x00100000   //存储压缩数据库的开始地址
 //#define DDR_ADDRitemListsize 0x00010000  //存储 itemList.size()和NumberOfRows的地址
 //#define DDR_ADDRNumberOfRows 0x00010005  //存储NumberOfRows的地址
 //#define DDR_ADDRAuub 0x00010010    //存储mapItemToTwu的地址
 int minUtility = 440;
-int total_read = 0;
 int huiCount = 0;
+//
 unordered_map<int, long> mapItemToTwu;
 unordered_map<int,unordered_map<int,long>> mapFMAP;
 unordered_map<int, long> mapItemToTwuList;  //存储为<item,twu>格式
-int TxtIsEnd = 0;
+
 int candidateCount = 0;
 int prefix[200];
 //int NumberOfTids = 0;
 //unsigned int MaxItemNum = 0; //item的数目，用来代替revisedTransaction的最大项目数
 
-class Pair
-{
-public:
-		int item = 0;
-		long utility = 0;
-};
-
-class Element
-{
-public:
-	int tid ;
-	int iutils ;
-	int rutils ;
-
-	int is_exist ;
-
-	Element(): tid(0),iutils(0),rutils(0),is_exist(0){}
-
-	void set(int tid,int iutils,int rutils){
-		this->tid = tid;
-		this->iutils = iutils;
-		this->rutils = rutils;
-		this->is_exist=1;
-	}
-	
-};
-
-
-class UtilityList
-{
-public:
-	int item ;
-	int sumIutils ;
-	int sumRutils ;
-
-	int is_exist;
-
-	vector<Element> elements;// = new Element();
-
-	UtilityList():item(0),sumIutils(0),sumRutils(0) ,is_exist(0){}
-	
-	void set(int item, int sumIutils, int sumRutils)
-	{
-		this->item = item;
-		this->sumIutils = sumIutils;
-		this->sumRutils = sumRutils;
-		this->is_exist = 1;
-	}
-
-	void addElement(Element element)
-	{
-		this->sumIutils += element.iutils;
-		this->sumRutils += element.rutils;
-		this->is_exist = 1;
-		elements.push_back(element);
-	}
-
-	bool operator < (UtilityList b){
-
-		unordered_map<int, long>::iterator pos1 = mapItemToTwu.find(this->item);
-		unordered_map<int, long>::iterator pos2 = mapItemToTwu.find(b.item);
-
-		return (pos1->second) < (pos2->second);
-	}
-
-
-};
-
-
-
-bool itemListAscendingOrder(int val1 , int val2)
+static bool itemListAscendingOrder(int val1 , int val2)
 {
 	unordered_map<int, long>::iterator pos1 = mapItemToTwu.find(val1);
 	unordered_map<int, long>::iterator pos2 = mapItemToTwu.find(val2);
@@ -112,7 +41,7 @@ bool itemListAscendingOrder(int val1 , int val2)
 // = 的情况
 
 
-bool revisedTransactionAscendingOrder(Pair pair1 , Pair pair2)
+static bool revisedTransactionAscendingOrder(Pair &pair1 , Pair &pair2)
 {
 	unordered_map<int, long>::iterator pos1 = mapItemToTwu.find(pair1.item);
 	unordered_map<int, long>::iterator pos2 = mapItemToTwu.find(pair2.item);
@@ -120,17 +49,16 @@ bool revisedTransactionAscendingOrder(Pair pair1 , Pair pair2)
 	return (pos1->second) < (pos2->second);
 }
 
-bool listOfUtilityListsAscendingOrder(UtilityList ul1 , UtilityList ul2)
+static bool listOfUtilityListsAscendingOrder(int a , int b)
 {
-	return ul1 < ul2;
+	unordered_map<int, long>::iterator pos1 = mapItemToTwu.find(a);
+	unordered_map<int, long>::iterator pos2 = mapItemToTwu.find(b);
+	return pos1->second < pos1->second;
 }
 
 
-
-
-
 //按照输入的字符分割string类型的数据
-vector<string> stringSplit(const string& str, char delim)
+static vector<string> stringSplit(const string& str, char delim)
 {
     size_t previous = 0;
     size_t current = str.find(delim);
@@ -151,7 +79,7 @@ vector<string> stringSplit(const string& str, char delim)
     return elems;
 }
 
-void findElementWithTID(UtilityList &ulist,int tid,Element &e){
+static void findElementWithTID(UtilityList &ulist,int tid,Element &e){
 
 	vector<Element> list =ulist.elements;
 	//list.assign(ulist.elements.begin(),ulist.elements.end());
@@ -176,7 +104,7 @@ void findElementWithTID(UtilityList &ulist,int tid,Element &e){
 }
 
 //write out
-void writeOut(int prefix[],int prefixLength,int item,long utility,fstream &file){
+static void writeOut(int prefix[],int prefixLength,int item,long utility,fstream &file){
 	huiCount++;
 
 	string buf;
@@ -188,7 +116,7 @@ void writeOut(int prefix[],int prefixLength,int item,long utility,fstream &file)
 	}
 	tem = to_string(item);
 	buf.append(tem);
-	buf.append(' #UTIL: ',9);
+	buf.append(" #UTIL: ");
 	tem = to_string(utility);
 	buf.append(tem);
 
@@ -198,7 +126,7 @@ void writeOut(int prefix[],int prefixLength,int item,long utility,fstream &file)
 
 
 //construct
-UtilityList construct(UtilityList &P,UtilityList &px,UtilityList &py,int minUtility){
+static UtilityList construct(UtilityList &P,UtilityList &px,UtilityList &py,int minUtility){
 
 	UtilityList pxyUL ;
 	pxyUL.item = py.item;
@@ -233,29 +161,34 @@ UtilityList construct(UtilityList &P,UtilityList &px,UtilityList &py,int minUtil
 				pxyUL.addElement(eXY);
 			}
 		}
-		
+		s
 	}
 	pxyUL.is_exist=1;
 	return pxyUL;
 	
 
 }
+//dec
+//只存储ulist对应的item,其他不保存在其中
+static vector<UtilityList> listOfUtilityLists;
+unordered_map<int,UtilityList> mapItemToUtilityList;
+
 //fhm
-void fhm(int prefix[],int prefixlength,UtilityList &pUL,list<UtilityList> &ULs,int minUtility,fstream &file){
-	for(list<UtilityList>::iterator it=ULs.begin();it!=ULs.end();it++){
-		UtilityList X = *it;
-		list<UtilityList> exULs;
+static void fhm(int prefix[],int prefixlength,UtilityList &pUL,vector<UtilityList> &ULs,int minUtility,fstream &file){
+	for(vector<UtilityList>::iterator it=ULs.begin();it!=ULs.end();it++){
+		UtilityList &X = mapItemToUtilityList[it->item];
+		vector<UtilityList> exULs;
 		
 		if(X.sumIutils >= minUtility){
 			writeOut(prefix,prefixlength,X.item,X.sumIutils,file);
 		}
 
 		if(X.sumIutils+X.sumRutils >= minUtility){
-			for(list<UtilityList>::iterator it2=it;it2!=ULs.end();++it2){
+			for(vector<UtilityList>::iterator it2=it+1;it2!=ULs.end();it2++){
 				UtilityList Y = *it2;
 				//eucs prune
 				//unordered_map<short int,unordered_map<short int,int>>::iterator mapTWUF = mapFMAP.find(x.item);
-				unordered_map<int,long> mapTWUF = mapFMAP.find(X.item)->second;
+				unordered_map<int,long> mapTWUF = mapFMAP.find(X.item)->second;//mapFMAP[X.item];
 				if(mapTWUF.size() != 0){
 					auto twuF = mapTWUF.find(Y.item);
 					if(twuF == mapTWUF.end() || twuF->second <= minUtility) continue;
@@ -275,6 +208,8 @@ void fhm(int prefix[],int prefixlength,UtilityList &pUL,list<UtilityList> &ULs,i
 		fhm(prefix,prefixlength+1,X,exULs,minUtility,file);
 	}
 }
+
+
 
 int main()
 {
@@ -305,34 +240,44 @@ int main()
 				}
 				else
 				{
-					mapItemToTwu.insert(pair<int,int>(atoi((*it).c_str()),transactionUtility));
+					mapItemToTwu.insert(pair<int,long>(atoi((*it).c_str()),transactionUtility));
 				}
 				//if(pos->second==2^32-1) cout << "overlap" <<endl;
 			}
 
 			items.clear();
 			NumberOfRows++;
-			cout << "this is "<< NumberOfRows << "line" << endl;
+			//cout << "this is "<< NumberOfRows << "line" << endl;
 		}while(!fin.eof());
 		
-		list<UtilityList> listOfUtilityLists;
-		unordered_map<int,UtilityList> mapItemToUtilityList;
+		int idxOfutil=0;
 		for(unordered_map<int,long>::iterator it = mapItemToTwu.begin(); it != mapItemToTwu.end(); it++)
 		{
-
+			UtilityList ulist ;
 			if((it->second) >= minUtility)
 			{
-				UtilityList ulist ;
+				//ulist.item = it->first;
+				//mapItemToUtilityList.insert({it->first,ulist});
+				//1
+				//list listofutilitylists
+				//listOfUtilityLists.push_front(ulist);
+				//mapItemToUtilityList.insert({it->first,(UtilityList *)&(*listOfUtilityLists.begin())});
+				//2
+				//vector listofutilitylists
+				//listOfUtilityLists.push_back(ulist);
+				//mapItemToUtilityList.insert({it->first,listOfUtilityLists[idxOfutil]});idxOfutil++;
+				//3
 				ulist.item = it->first;
-				mapItemToUtilityList.insert(pair<int,UtilityList>(it->first,ulist));
-				listOfUtilityLists.push_back(ulist);
+				listOfUtilityLists.push_back(ulist);	
 			}
 		}
-
-		listOfUtilityLists.sort(listOfUtilityListsAscendingOrder);
+		//idxOfutil=0;
+		//对效用列表按照item的twu升序排列
+		sort(listOfUtilityLists.begin(),listOfUtilityLists.end(),listOfUtilityListsAscendingOrder);
+		//listOfUtilityLists.sort(listOfUtilityListsAscendingOrder);
 		//ItemListSize = itemList.size();
-		total_read = 0;
-		TxtIsEnd = 0;// 1:txt is end
+		//tid初始化为0
+		int tid = 0;
 		fin.seekg(0);
 		//second database scan
 		do{
@@ -341,8 +286,8 @@ int main()
 			vector<string> items = stringSplit(split.front(),' ');
 			vector<string> utilityValues = stringSplit(split.back(),' ');
 			//保存twu大于minutil的 项-效用对
-			list<Pair> revisedTransaction;
-			int tid = 0;
+			vector<Pair> revisedTransaction;
+			
 			int remainingUtility = 0;
 			//newTWU
 			int newTWU = 0;
@@ -364,21 +309,37 @@ int main()
 			items.clear();
 			utilityValues.clear();
 			//将剩余项按照twu大小升序排列
-			revisedTransaction.sort(revisedTransactionAscendingOrder);
+			sort(revisedTransaction.begin(),revisedTransaction.end(),revisedTransactionAscendingOrder);
+			//revisedTransaction.sort(revisedTransactionAscendingOrder);
+			UtilityList itemUl;
 			//第二次数据库扫描构建 每个项 的效用列表以及eucs结构
-			for(list<Pair>::iterator it = revisedTransaction.begin(); it != revisedTransaction.end(); it++){
+			for(vector<Pair>::iterator it = revisedTransaction.begin(); it != revisedTransaction.end(); it++){
 
 				Pair pair = *it;
 				//去除当前项，剩余项的效用和
 				remainingUtility = remainingUtility - pair.utility;
 				//在效用列表和项的map中，找到当前项的map,后续添加 项-效用-剩余效用 对
-				unordered_map<int,UtilityList>::iterator tem = mapItemToUtilityList.find(pair.item);
-				UtilityList utilityListOfItem = tem->second;
-
+				//unordered_map<int,UtilityList&>::iterator tem = mapItemToUtilityList.find(pair.item);
 				Element element ;
 				element.set(tid,pair.utility,remainingUtility);
-
-				utilityListOfItem.addElement(element);
+				//1
+				//UtilityList tem = mapItemToUtilityList.find(pair.item)->second;
+				//tem.addElement(element);
+				//2
+				//listOfUtilityLists[idxOfutil].addElement(element);idxOfutil++;
+				//itemUl = find(listOfUtilityLists.begin(),listOfUtilityLists.end(),it->item)
+				//*itemUl.addElement(element);
+				//(mapItemToUtilityList.find(pair.item)->second).addElement(element);
+				//4
+				itemUl.addElement(element);
+				if(mapItemToUtilityList.find(pair.item) != mapItemToUtilityList.end()) {
+					mapItemToUtilityList[pair.item].addElement(element);
+				}else{
+					mapItemToUtilityList.insert({pair.item,itemUl});
+				}
+				//3
+				//utilityListOfItem.addElement(element);
+				//mapItemToUtilityList.insert({pair.item,utilityListOfItem});
 				//ecus结构的构建
 				unordered_map<int,unordered_map<int,long>>::iterator temp = mapFMAP.find(pair.item);
 				unordered_map<int,long> mapFMAPItem ;//= temp->second;
@@ -388,7 +349,7 @@ int main()
 				      mapFMAP.insert({item,mapFMAPItem});
 				 }else mapFMAPItem = temp->second;
 
-				 for(list<Pair>::iterator it2=it;it2!=revisedTransaction.end();++it2){
+				 for(vector<Pair>::iterator it2=it+1;it2!=revisedTransaction.end();it2++){
 				      Pair pairAfter = *it2;
 				      unordered_map<int,long>::iterator temp1 = mapFMAPItem.find(pairAfter.item);
 					  if(temp1 == mapFMAPItem.end()){
@@ -401,7 +362,7 @@ int main()
 				 mapFMAP.insert({pair.item,mapFMAPItem});
 				 //eucs构建
 			}
-			
+			//每行读取完成tid++
 			tid++;
 			revisedTransaction.clear();
 		}while(!fin.eof());
@@ -418,13 +379,12 @@ int main()
 	file.close(); //关闭文件
 
 	file.open("C:\\Users\\xidian\\Desktop\\fhm\\hui.txt", ios::app); //以追加模式打开文件
-	file << "item    sumiu" << endl;
 	if(!file.is_open()) cout << "2error open file" <<endl;
 	//
 	End = clock();
 	duration =double((End - Begin)/CLK_TCK);
 	printf("duration: %d",duration);
-	system("pause");
+	
 	fhm(prefix,prefixlength,pUL,listOfUtilityLists,minUtility,file);
 	file.close();
 	
