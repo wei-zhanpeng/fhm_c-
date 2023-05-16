@@ -10,7 +10,9 @@
                 "${file}",
                 "-I","C:\\Users\\xidian\\Desktop\\fhm",
                 "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe"
+                "${fileDirname}\\${fileBasenameNoExtension}.exe",
+                //"-v",
+                "-lsetupapi"
             ],
             "options": {
                 "cwd": "${fileDirname}"

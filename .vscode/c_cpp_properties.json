@@ -4,7 +4,8 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "C:\\Users\\xidian\\Desktop\\fhm"
+                "C:\\Users\\xidian\\Desktop\\fhm",
+                "D:\\lib\\cpuls\\systemc-2.3.4\\src"
             ],
             "defines": [
                 "_DEBUG",
