@@ -28,9 +28,7 @@ unordered_map<int, int> mapItemToTwuList;  //存储为<item,twu>格式
 static vector<UtilityList> listOfUtilityLists;//只存储ulist对应的item,其他不保存在其中
 unordered_map<int,UtilityList> mapItemToUtilityList;
 int candidateCount = 0;
-int prefix[200];
-//item 升序排列
-static bool itemListAscendingOrder(int val1 , int val2)
+
 {
 	unordered_map<int, int>::iterator pos1 = mapItemToTwu.find(val1);
 	unordered_map<int, int>::iterator pos2 = mapItemToTwu.find(val2);
@@ -291,12 +289,11 @@ int main()
 
 			items.clear();
 			NumberOfRows++;
+			cout << "this is "<< NumberOfRows << "line" << endl;
 		}while(!fin.eof());
-
-		cout << "max twu:" << findMaxValuePair(mapItemToTwu).second << endl;
 		
-		int idxOfutil=0;
-		//构建listofUtilityLists以及mapItemToUtilityList
+		list<UtilityList> listOfUtilityLists;
+		unordered_map<int,UtilityList> mapItemToUtilityList;
 		for(unordered_map<int,int>::iterator it = mapItemToTwu.begin(); it != mapItemToTwu.end(); it++)
 		{
 			UtilityList ulist ;
@@ -321,8 +318,9 @@ int main()
 			vector<string> items = stringSplit(split.front(),' ');
 			vector<string> utilityValues = stringSplit(split.back(),' ');
 			//保存twu大于minutil的 项-效用对
-			vector<Pair> revisedTransaction;
-			
+			list<Pair> revisedTransaction;
+			int tid = 0;
+
 			int remainingUtility = 0;
 			//newTWU
 			int newTWU = 0;
@@ -344,33 +342,24 @@ int main()
 				
 			}
 			//save space
-			//items.clear();
-			//utilityValues.clear();
+			items.clear();
+			utilityValues.clear();
 			//将剩余项按照twu大小升序排列
-			sort(revisedTransaction.begin(),revisedTransaction.end(),revisedTransactionAscendingOrder);
-			
+			revisedTransaction.sort(revisedTransactionAscendingOrder);
 			//第二次数据库扫描构建 每个项 的效用列表以及eucs结构
-			for(vector<Pair>::iterator it = revisedTransaction.begin(); it != revisedTransaction.end(); it++){
+			for(list<Pair>::iterator it = revisedTransaction.begin(); it != revisedTransaction.end(); it++){
 
 				Pair pair = *it;
 				//去除当前项，剩余项的效用和
 				remainingUtility = remainingUtility - pair.utility;
 				//在效用列表和项的map中，找到当前项的map,后续添加 项-效用-剩余效用 对
-				Element element ;
-				element.set(tid,pair.utility,remainingUtility);
-				//1
-				/*UtilityList itemUl;
-				itemUl.item = it->item;
-				itemUl.addElement(element);
-				if(mapItemToUtilityList.find(pair.item) != mapItemToUtilityList.end()) {
-					mapItemToUtilityList[pair.item].addElement(element);
-				}else{
-					mapItemToUtilityList.insert({pair.item,itemUl});
-				}*/
-				//2
-				UtilityList &itemUl = mapItemToUtilityList[pair.item];
-				itemUl.addElement(element);
-				
+				unordered_map<int,UtilityList>::iterator tem = mapItemToUtilityList.find(pair.item);
+				UtilityList utilityListOfItem = tem->second;
+
+				Element element = Element(tid,pair.utility,remainingUtility);
+
+				utilityListOfItem.addElement(element);
+
 				//ecus结构的构建
 				unordered_map<int,unordered_map<int,int>>::iterator temp = mapFMAP.find(pair.item);
 				unordered_map<int,int> mapFMAPItem ;//= temp->second;
@@ -393,7 +382,6 @@ int main()
 				 mapFMAP.insert({pair.item,mapFMAPItem});
 				 //eucs构建
 			}
-			//每行读取完成tid++
 			tid++;
 			revisedTransaction.clear();
 		}while(!fin.eof());
