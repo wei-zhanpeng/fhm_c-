@@ -1,2 +1,4 @@
-*.txt
 *.exe
+pcie
+*.txt
+.vs

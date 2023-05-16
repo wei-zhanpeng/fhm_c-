@@ -2,17 +2,20 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "C/C++: g++.exe 生成活动文件",
-            "command": "C:/msys64/mingw64/bin/g++.exe",
+            "label": "C/C++: cpp.exe 生成活动文件",
+            "command": "C:\\msys64\\mingw64\\bin\\g++.exe",
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
                 "${file}",
+                "-I","C:\\Users\\xidian\\Desktop\\fhm",
                 "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe"
+                "${fileDirname}\\${fileBasenameNoExtension}.exe",
+                //"-v",
+                "-lsetupapi"
             ],
             "options": {
-                "cwd": "C:/msys64/mingw64/bin"
+                "cwd": "${fileDirname}"
             },
             "problemMatcher": [
                 "$gcc"

@@ -3,7 +3,9 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "C:\\Users\\xidian\\Desktop\\fhm",
+                "D:\\lib\\cpuls\\systemc-2.3.4\\src"
             ],
             "defines": [
                 "_DEBUG",
@@ -11,9 +13,10 @@
                 "_UNICODE"
             ],
             "cStandard": "c17",
-            "cppStandard": "gnu++17",
+            "cppStandard": "c++17",
             "intelliSenseMode": "windows-gcc-x64",
-            "compilerPath": "C:/msys64/mingw64/bin/g++.exe"
+            "compilerPath": "C:\\msys64\\mingw64\\bin\\g++.exe",
+            "compilerArgs": []
         }
     ],
     "version": 4
