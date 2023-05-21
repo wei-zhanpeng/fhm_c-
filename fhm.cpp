@@ -20,7 +20,7 @@ using namespace std;
 //
 clock_t  Begin, End;
 double duration;
-int minUtility = 80000;
+int minUtility = 50000;
 int huiCount = 0;
 unordered_map<int,int> mapItemToTwu;
 unordered_map<int,unordered_map<int,int>> mapFMAP;
@@ -192,7 +192,45 @@ static UtilityList construct(UtilityList &P,UtilityList &X,UtilityList &Y,int mi
 	
 
 }
+//fhm-fit hardware
+//ULs为所有一项集的效用列表，UL_nitemset为一个n项集的效用列表，itemset存储n项集的所有item，itemsetlen存储itemset长度
+//itemset[],itemsetlen=0,ULs,ULs,offset[]={0},file
+static void fhm_fithd(int itemset[],int itemsetlen,UtilityList &UL_nitemset,vector<UtilityList> &ULs,int offset[],fstream &file){
+	//suffix_idx标注ULs中对应位置的item的坐标，idx用来标注offset的长度
+	int suffix_idx=0;
+	int off[];
+	for(vector<UtilityList>::iterator it1=UL_nitemset.begin();it1!=UL_nitemset.end();it1++){
+		UtilityList &X = mapItemToUtilityList[it1->item];
+		X.item = it1->item;
+		vector<UtilityList> exULs;
+		//判断是否为hui
+		if(X.sumIutils >= minUtility){
+			//writeout;
+		}
+		if(X.sumIutils+X.sumRutils >= minUtility){
+			//用来索引off数组，其中存储着itemset最后一个item对应的位置
+			//y是索引off的长度，loc+offset[suffix——len]代表着该itemset的最后一个item在ULs中的位置
+			int loc = 0,idx=0;
+			//存在潜在的hui,则进行探索
+			for(auto it2=ULs.begin();it2!=ULs.end();it2++){
+				loc++;
+				if(itemsetlen==0) UtilityList &Y = *it2;
+				else UtilityList &Y = *(it2+offset[suffix_idx]+1);
+				//直接construct，然后判断是否
+				UtilityList temp = construct(X,Y);
+				if(temp.is_exist==1 && (temp.sumIutils>=minUtility || temp.sumIutils+temp.sumRutils>=minUtility)){
+					exULs.push_back(temp);
+					off[idx++] = loc+offset[suffix_idx];
+				}
+			}
+		}
+		suffix_idx++;
+		itemset[itemsetlen++] = X.item;
+		fhm_fithd(itemset,itemsetlen,exULs,ULs,offset,file);
+	}
+} 
 //fhm
+//ULs里面只存储了升序排列的item，并没有存取具体的Utilitylist，因此需要在mapitemtoutitlitylist中取得
 static void fhm(int prefix[],int prefixlength,UtilityList &pUL,vector<UtilityList> &ULs,int minUtility,fstream &file){
 	for(vector<UtilityList>::iterator it=ULs.begin();it!=ULs.end();it++){
 		UtilityList &X = mapItemToUtilityList[it->item];
@@ -238,7 +276,7 @@ int main()
 		if(!fin.is_open()) { cout << "error" <<endl; return 0 ;} 
         //------------------------------------
 		//pcie device 查找
-		const auto device_paths = get_device_paths(GUID_DEVINTERFACE_XDMA);
+	/* 	const auto device_paths = get_device_paths(GUID_DEVINTERFACE_XDMA);
 		if (device_paths.empty()) {
             throw std::runtime_error("Failed to find XDMA device!");
         }else{
@@ -261,7 +299,7 @@ int main()
             std::cout << "Could not find h2c_" << 0 << " and/or c2h_" << 0 << "\n";
         } else {
             std::cout << "Found h2c_" << 0 << " and c2h_" << 0 << ":\n";
-        }
+        } */
         
         //-------------------------------------
 
@@ -299,12 +337,14 @@ int main()
 		//构建listofUtilityLists以及mapItemToUtilityList
 		for(unordered_map<int,int>::iterator it = mapItemToTwu.begin(); it != mapItemToTwu.end(); it++)
 		{
-			UtilityList ulist ;
+			UtilityList *ulist = new UtilityList();
 			if((it->second) >= minUtility)
 			{
-				ulist.item = it->first;
-				listOfUtilityLists.push_back(ulist);	
-				mapItemToUtilityList.insert({it->first,ulist});
+				ulist->item = it->first;
+				//怎么将两个ulist存取为一个地址空间？
+				listOfUtilityLists.push_back(*ulist);
+				mapItemToUtilityList.insert({it->first,*ulist});
+				//listOfUtilityLists.push_back(ulist);	
 				idxOfutil++;
 			}
 		}
@@ -403,13 +443,9 @@ int main()
 	mapItemToTwu.clear();
 	UtilityList pUL;
 	//---------------------------------------
-	unsigned long offset;//数据传输时的偏移
+/* 	unsigned long offset;//数据传输时的偏移
 	unsigned long lenOfUL=0;
 	unsigned long off1=0x40000000,off2=0x42000000;
-	/*for(auto uli = mapItemToUtilityList.begin();uli!=mapItemToUtilityList.end();uli++){
-		auto &ulist = uli->second;
-		UL2FPGA(ulist,offset,h2c,lenOfUL);
-	}*/
 	auto uli = mapItemToUtilityList.begin();
 	h2c.reoffset(off1);
 	UL2FPGA(uli->second,offset,h2c,lenOfUL);
@@ -424,7 +460,7 @@ int main()
 	c2h.reoffset(off1);
     if(!ReadFile(c2h.h,&buf,(DWORD)4000,&num,NULL)){
         throw std::runtime_error("failed to read"+std::to_string(GetLastError()));
-    }
+    } */
     //------------------------------
    /* std::cout << "    Initiating H2C_" << 0 << " transfer of " << h2c_data.size() * sizeof(uint32_t) << " bytes...\n";
     h2c.write(h2c_data.data(), h2c_data.size() * sizeof(uint32_t));
