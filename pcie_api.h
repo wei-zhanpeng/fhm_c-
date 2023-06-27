@@ -28,6 +28,14 @@ typedef struct {
 	HANDLE h2c0;
 } xdma_device;*/
 
+std::string get_windows_error_msg() {
+
+    char msg_buffer[256];
+    FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, NULL, GetLastError(), 
+                   MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&msg_buffer, 256, NULL);
+    return{ msg_buffer, 256 };
+}
+
 //-----------------------windows device handle----------------------------//
 struct device_file {
     HANDLE h;
@@ -38,6 +46,21 @@ struct device_file {
     void reoffset(long device_offset);
     size_t write(void* buffer, size_t size);
     size_t read(void* buffer, size_t size);
+
+    template <typename T>
+    T read_intr(long address) {
+        if (INVALID_SET_FILE_POINTER == SetFilePointer(h, address, NULL, FILE_BEGIN)) {
+            throw std::runtime_error("SetFilePointer failed: " + get_windows_error_msg());
+        }
+        T buffer;
+        unsigned long num_bytes_read;
+        if (!ReadFile(h, &buffer, sizeof(T), &num_bytes_read, NULL)) {
+            throw std::runtime_error("Failed to read from stream! " + get_windows_error_msg());
+        } else if (num_bytes_read != sizeof(T)) {
+            throw std::runtime_error("Failed to read all bytes!");
+        }
+        return buffer;
+    }
 };
 
 device_file::device_file(const std::string& path, DWORD accessFlags) {

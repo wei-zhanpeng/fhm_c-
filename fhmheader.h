@@ -54,6 +54,7 @@ public:
 	int is_exist;
     int sizeofself = 12;
 	UtilityList():item(0),sumIutils(0),sumRutils(0) ,is_exist(0){}
+	UtilityList(int a):item(a){}
     UtilityList(int a,int b,int c,int d):item(a),sumIutils(b),sumRutils(c) ,is_exist(d){}
     ~ UtilityList(){};
 	
